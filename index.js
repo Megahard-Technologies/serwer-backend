@@ -25,7 +25,8 @@ db.connect((err) => {
 app.get('/api/wydarzenia', (req, res) => {
   const sql = 
   `SELECT wydarzenia.id_wydarzenia, uslugodawca.nazwa_firmy, wydarzenia.nazwa, uslugodawca.adres, wydarzenia.zdjecie 
-  FROM wydarzenia JOIN uslugodawca ON wydarzenia.id_uslugodawcy = uslugodawca.id_uslugodawcy`;
+  FROM wydarzenia JOIN uslugodawca ON wydarzenia.id_uslugodawcy = uslugodawca.id_uslugodawcy
+  WHERE wydarzenia.czas_zakonczenia >= NOW()`; // zakończone wydarzenia nie pokazują się
   db.query(sql, (err, result) => {
     if (err) {
       res.status(500).send({ error: 'Something failed!' });
