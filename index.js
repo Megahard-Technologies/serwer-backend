@@ -77,6 +77,38 @@ app.get('/api/wydarzenia/godziny_otwarcia/:eventId', (req, res) => {
   });
 });
 
+app.get('/api/wydarzenia/ocena/:eventId', (req, res) => {
+  const { eventId } = req.params;
+  const sql = 
+  `SELECT AVG(opinie.ilosc_gwiazdek) AS avg_ilosc_gwiazdek
+  FROM opinie JOIN uslugodawca ON opinie.id_uslugodawcy = uslugodawca.id_uslugodawcy JOIN wydarzenia ON uslugodawca.id_uslugodawcy = wydarzenia. id_uslugodawcy
+  WHERE wydarzenia.id_wydarzenia = ?`;
+
+  db.query(sql, [eventId], (err, result) => {
+    if (err) {
+      res.status(500).send({ error: 'Something failed!' });
+    } else {
+      res.json(result);
+    }
+  });
+});
+
+app.get('/api/wydarzenia/opinie/:eventId', (req, res) => {
+  const { eventId } = req.params;
+  const sql = 
+  `SELECT opinie.opis, DATE_FORMAT(opinie.czas , '%Y-%m-%d') AS czas
+  FROM opinie JOIN uslugodawca ON opinie.id_uslugodawcy = uslugodawca.id_uslugodawcy JOIN wydarzenia ON uslugodawca.id_uslugodawcy = wydarzenia. id_uslugodawcy
+  WHERE wydarzenia.id_wydarzenia = ?`;
+
+  db.query(sql, [eventId], (err, result) => {
+    if (err) {
+      res.status(500).send({ error: 'Something failed!' });
+    } else {
+      res.json(result);
+    }
+  });
+});
+
 app.listen(3000, () => {
   console.log('Server started on port 3000');
 });
