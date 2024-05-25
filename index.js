@@ -81,7 +81,7 @@ app.get('/api/wydarzenia/godziny_otwarcia/:eventId', (req, res) => {
 app.get('/api/wydarzenia/ocena/:eventId', (req, res) => {
   const { eventId } = req.params;
   const sql =
-    `SELECT AVG(opinie.ilosc_gwiazdek) AS avg_ilosc_gwiazdek
+    `SELECT ROUND(AVG(opinie.ilosc_gwiazdek), 2) AS avg_ilosc_gwiazdek, COUNT(opinie.ilosc_gwiazdek) AS ilosc_opinii
   FROM opinie JOIN uslugodawca ON opinie.id_uslugodawcy = uslugodawca.id_uslugodawcy JOIN wydarzenia ON uslugodawca.id_uslugodawcy = wydarzenia. id_uslugodawcy
   WHERE wydarzenia.id_wydarzenia = ?`;
 
@@ -115,11 +115,12 @@ app.use(express.json()); // Ten wiersz jest ważny do analizowania treści JSON 
 app.post('/api/wydarzenia/wysylanie_opinii/:id_uslugodawcy', (req, res) => {
   const { id_uslugodawcy } = req.params;
   const { opinion } = req.body; // Dane z ciała zapytania
+  const {rating} = req.body;
 
-  console.log(`Received opinion for provider ${id_uslugodawcy}: ${opinion}`);
-  const sql = 'INSERT INTO opinie (id_uslugodawcy, opis, czas) VALUES (?, ?, now())';
+  console.log(`Received opinion for provider ${id_uslugodawcy}: ${opinion}, ${rating}`);
+  const sql = 'INSERT INTO opinie (id_uslugodawcy, opis, ilosc_gwiazdek, czas) VALUES (?, ?, ?, now())';
 
-  db.query(sql, [id_uslugodawcy, opinion], (err, result) => {
+  db.query(sql, [id_uslugodawcy, opinion, rating], (err, result) => {
     if (err) {
       res.status(500).send({ error: 'Something failed!' });
     } else {
