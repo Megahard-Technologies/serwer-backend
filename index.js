@@ -47,8 +47,8 @@ app.get('/api/wydarzenia', (req, res) => {
 app.get('/api/wydarzenia/szczegoly/:eventId', (req, res) => {
   const { eventId } = req.params;
   const sql =
-    `SELECT wydarzenia.id_uslugodawcy, wydarzenia.nazwa, wydarzenia.opis, DATE_FORMAT(wydarzenia.czas_rozpoczecia, '%Y-%m-%d') AS czas_rozpoczecia, 
-  DATE_FORMAT(wydarzenia.czas_zakonczenia, '%Y-%m-%d') AS czas_zakonczenia, 
+    `SELECT wydarzenia.id_uslugodawcy, wydarzenia.nazwa, wydarzenia.opis, DATE_FORMAT(wydarzenia.czas_rozpoczecia, '%d-%m-%Y %H:%i') AS czas_rozpoczecia, 
+  DATE_FORMAT(wydarzenia.czas_zakonczenia, '%d-%m-%Y %H:%i') AS czas_zakonczenia, 
   uslugodawca.nazwa_firmy, uslugodawca.adres, uslugodawca.email, uslugodawca.nr_telefonu
   FROM wydarzenia JOIN uslugodawca ON wydarzenia.id_uslugodawcy = uslugodawca.id_uslugodawcy
   WHERE wydarzenia.id_wydarzenia = ?`;
@@ -117,7 +117,7 @@ app.post('/api/wydarzenia/wysylanie_opinii/:id_uslugodawcy', (req, res) => {
   const { opinion } = req.body; // Dane z ciała zapytania
   const {rating} = req.body;
 
-  console.log(`Received opinion for provider ${id_uslugodawcy}: ${opinion}, ${rating}`);
+  //console.log(`Received opinion for provider ${id_uslugodawcy}: ${opinion}, ${rating}`);
   const sql = 'INSERT INTO opinie (id_uslugodawcy, opis, ilosc_gwiazdek, czas) VALUES (?, ?, ?, now())';
 
   db.query(sql, [id_uslugodawcy, opinion, rating], (err, result) => {
