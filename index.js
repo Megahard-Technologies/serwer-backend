@@ -24,10 +24,10 @@ db.connect((err) => {
 
 app.get('/api/wydarzenia', (req, res) => {
   const sql =
-    `SELECT wydarzenia.id_wydarzenia, uslugodawca.nazwa_firmy, wydarzenia.nazwa, uslugodawca.adres, wydarzenia.zdjecie 
-  FROM wydarzenia JOIN uslugodawca ON wydarzenia.id_uslugodawcy = uslugodawca.id_uslugodawcy
-  WHERE wydarzenia.czas_zakonczenia >= NOW()`; // zakończone wydarzenia nie pokazują się
-  
+    `SELECT wydarzenia.id_wydarzenia, uslugodawca.nazwa_firmy, wydarzenia.nazwa, uslugodawca.adres, wydarzenia.zdjecie, wydarzenia.czas_rozpoczecia
+  FROM wydarzenia JOIN uslugodawca ON wydarzenia.id_uslugodawcy = uslugodawca.id_uslugodawcy`;
+  //WHERE wydarzenia.czas_zakonczenia >= NOW()`; // zakończone wydarzenia nie pokazują się
+
   db.query(sql, (err, result) => {
     if (err) {
       res.status(500).send({ error: 'Something failed!' });
@@ -115,17 +115,40 @@ app.use(express.json()); // Ten wiersz jest ważny do analizowania treści JSON 
 app.post('/api/wydarzenia/wysylanie_opinii/:id_uslugodawcy', (req, res) => {
   const { id_uslugodawcy } = req.params;
   const { opinion } = req.body; // Dane z ciała zapytania
-  const {rating} = req.body;
+  const { rating } = req.body;
+  const { ip } = req.body;
 
-  //console.log(`Received opinion for provider ${id_uslugodawcy}: ${opinion}, ${rating}`);
-  const sql = 'INSERT INTO opinie (id_uslugodawcy, opis, ilosc_gwiazdek, czas) VALUES (?, ?, ?, now())';
+  console.log(`Received opinion for provider ${id_uslugodawcy}: ${opinion}, ${rating}, ${ip}`);
+  const sql = 'INSERT INTO opinie (id_uslugodawcy, opis, ilosc_gwiazdek, czas, adres_ip) VALUES (?, ?, ?, now(), ?)';
 
-  db.query(sql, [id_uslugodawcy, opinion, rating], (err, result) => {
+  db.query(sql, [id_uslugodawcy, opinion, rating, ip], (err, result) => {
     if (err) {
       res.status(500).send({ error: 'Something failed!' });
     } else {
       res.json({ status: 'success', message: 'Opinion submitted successfully' });
     }
+  });
+});
+
+app.get('/api/wydarzenia/walidacja_wysylanie_opinii', (req, res) => {
+  const { ip, provider_id } = req.query;
+
+  console.log(`Received IP: ${ip} and Provider ID: ${provider_id}`);
+
+  sql = `SELECT * FROM opinie WHERE adres_ip = ? AND id_uslugodawcy = ?`;
+  db.query(sql, [ip, provider_id], (err, result) => {
+    if (err) {
+      return res.status(500).json({ error: 'Something failed!' });
+    }
+    if (result.length > 0) {
+      //return res.status(400).json({ error: 'Opinion already submitted' });
+      res.json({ success: true });
+      //res.json(result);
+    }
+    else{
+      return res.json('Brak opinii');
+    }
+
   });
 });
 
