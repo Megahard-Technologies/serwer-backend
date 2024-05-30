@@ -25,8 +25,8 @@ db.connect((err) => {
 app.get('/api/wydarzenia', (req, res) => {
   const sql =
     `SELECT wydarzenia.id_wydarzenia, uslugodawca.nazwa_firmy, wydarzenia.nazwa, uslugodawca.adres, wydarzenia.zdjecie, wydarzenia.czas_rozpoczecia
-  FROM wydarzenia JOIN uslugodawca ON wydarzenia.id_uslugodawcy = uslugodawca.id_uslugodawcy`;
-  //WHERE wydarzenia.czas_zakonczenia >= NOW()`; // zakończone wydarzenia nie pokazują się
+  FROM wydarzenia JOIN uslugodawca ON wydarzenia.id_uslugodawcy = uslugodawca.id_uslugodawcy
+  WHERE wydarzenia.czas_zakonczenia >= NOW()`; // zakończone wydarzenia nie pokazują się
 
   db.query(sql, (err, result) => {
     if (err) {
@@ -118,7 +118,7 @@ app.post('/api/wydarzenia/wysylanie_opinii/:id_uslugodawcy', (req, res) => {
   const { rating } = req.body;
   const { ip } = req.body;
 
-  console.log(`Received opinion for provider ${id_uslugodawcy}: ${opinion}, ${rating}, ${ip}`);
+  //console.log(`Received opinion for provider ${id_uslugodawcy}: ${opinion}, ${rating}, ${ip}`);
   const sql = 'INSERT INTO opinie (id_uslugodawcy, opis, ilosc_gwiazdek, czas, adres_ip) VALUES (?, ?, ?, now(), ?)';
 
   db.query(sql, [id_uslugodawcy, opinion, rating, ip], (err, result) => {
@@ -133,22 +133,38 @@ app.post('/api/wydarzenia/wysylanie_opinii/:id_uslugodawcy', (req, res) => {
 app.get('/api/wydarzenia/walidacja_wysylanie_opinii', (req, res) => {
   const { ip, provider_id } = req.query;
 
-  console.log(`Received IP: ${ip} and Provider ID: ${provider_id}`);
-
+  //console.log(`Received IP: ${ip} and Provider ID: ${provider_id}`);
   sql = `SELECT * FROM opinie WHERE adres_ip = ? AND id_uslugodawcy = ?`;
+
   db.query(sql, [ip, provider_id], (err, result) => {
     if (err) {
       return res.status(500).json({ error: 'Something failed!' });
     }
     if (result.length > 0) {
-      //return res.status(400).json({ error: 'Opinion already submitted' });
       res.json({ success: true });
+      //return res.status(400).json({ error: 'Opinion already submitted' });
       //res.json(result);
     }
-    else{
+    else {
       return res.json('Brak opinii');
     }
 
+  });
+});
+
+app.post('/api/wydarzenia/usuwanie_opinii', (req, res) => {
+  const { id_uslugodawcy } = req.body;
+  const { ip } = req.body;
+
+  console.log(`${id_uslugodawcy}, ${ip}`);
+  const sql = 'DELETE FROM opinie WHERE id_uslugodawcy = ? AND adres_ip = ?;';
+
+  db.query(sql, [id_uslugodawcy, ip], (err, result) => {
+    if (err) {
+      res.status(500).send({ error: 'Something failed!' });
+    } else {
+      res.json({ status: 'success', message: 'Opinion deleted successfully' });
+    }
   });
 });
 
