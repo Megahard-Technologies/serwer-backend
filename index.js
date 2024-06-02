@@ -1,173 +1,228 @@
 const express = require('express');
 const cors = require('cors');
-const mysql = require('mysql');
+const mysql = require('mysql2');
 
 const app = express();
 
 app.use(cors());
+app.use(express.json({limit: '50mb'})); // Ten wiersz jest ważny do analizowania treści JSON w żądaniach POST
+
 
 const db = mysql.createConnection({
-  host: 'localhost',
-  port: 3333,
-  user: 'root',
-  password: 'root',
-  database: 'kck_pio_db',
-  timezone: 'Z' // zmiana strefy czasowej na UTC
+    host: 'localhost',
+    port: 3333,
+    user: 'root',
+    password: 'root',
+    database: 'kck_pio_db',
+    timezone: 'Z' // zmiana strefy czasowej na UTC
 });
 
 db.connect((err) => {
-  if (err) {
-    throw err;
-  }
-  console.log('Connected to database');
+    if (err) {
+        throw err;
+    }
+    console.log('Connected to database');
 });
 
+// Uslugodawca
+
+// app.post('/api/uslugodawca/', (req, res) => {
+//
+// }
+
+app.post('/api/wydarzenia/', (req, res) => {
+    const {name, image, description, startDate, endDate, price, serviceProviderId} = req.body;
+
+    const sql = `INSERT INTO wydarzenia (nazwa, zdjecie, opis, czas_rozpoczecia, czas_zakonczenia, cena, id_uslugodawcy)
+               VALUES (?, ?, ?, ?, ?, ?, ?)`;
+
+    let mysqlStartDate = new Date(startDate).toISOString().slice(0, 19).replace('T', ' ');
+    let mysqlEndDate = new Date(endDate).toISOString().slice(0, 19).replace('T', ' ');
+
+    db.query(sql, [name, image, description, mysqlStartDate, mysqlEndDate, price, serviceProviderId], (err, result) => {
+        if (err) {
+            res.status(500).send({error: `Something failed! : ${err}`});
+        } else {
+            res.json({status: 'success', message: 'Event added successfully'});
+        }
+    });
+});
+
+app.get('/api/wydarzenia/', (req, res) => {
+    const sql = `SELECT nazwa AS name, 
+                      zdjecie AS image, 
+                      opis AS description, 
+                      czas_rozpoczecia AS startDate, 
+                      czas_zakonczenia AS endDate,
+                      cena AS price
+               FROM wydarzenia`;
+
+    db.query(sql, (err, result) => {
+        if (err) {
+            res.status(500).send({error: 'Something failed!'});
+        } else {
+            // Przekształć daty z formatu SQL do formatu JavaScript
+            const events = result.map(event => ({
+                ...event,
+                startDate: new Date(event.startDate),
+                endDate: new Date(event.endDate),
+                price: parseFloat(event.price)
+            }));
+            res.json(events);
+        }
+    });
+});
+
+// app.get('/api/opinie', (req, res) => {
+//
+// })
+
+
+// User
 app.get('/api/wydarzenia', (req, res) => {
-  const sql =
-    `SELECT wydarzenia.id_wydarzenia, uslugodawca.nazwa_firmy, wydarzenia.nazwa, uslugodawca.adres, wydarzenia.zdjecie, wydarzenia.czas_rozpoczecia
+    const sql =
+        `SELECT wydarzenia.id_wydarzenia, uslugodawca.nazwa_firmy, wydarzenia.nazwa, uslugodawca.adres, wydarzenia.zdjecie, wydarzenia.czas_rozpoczecia
   FROM wydarzenia JOIN uslugodawca ON wydarzenia.id_uslugodawcy = uslugodawca.id_uslugodawcy
   WHERE wydarzenia.czas_zakonczenia >= NOW()`; // zakończone wydarzenia nie pokazują się
 
-  db.query(sql, (err, result) => {
-    if (err) {
-      res.status(500).send({ error: 'Something failed!' });
-    } else {
-      const events = result.map(event => {
-        if (event.zdjecie) {
-          event.image_base64 = event.zdjecie;
+    db.query(sql, (err, result) => {
+        if (err) {
+            res.status(500).send({error: 'Something failed!'});
+        } else {
+            const events = result.map(event => {
+                if (event.zdjecie) {
+                    event.image_base64 = event.zdjecie;
+                }
+                delete event.zdjecie;
+                return event;
+            });
+            res.json(events);
         }
-        delete event.zdjecie;
-        return event;
-      });
-      res.json(events);
-    }
-  });
+    });
 });
 
 app.get('/api/wydarzenia/szczegoly/:eventId', (req, res) => {
-  const { eventId } = req.params;
-  const sql =
-    `SELECT wydarzenia.id_uslugodawcy, wydarzenia.nazwa, wydarzenia.opis, DATE_FORMAT(wydarzenia.czas_rozpoczecia, '%d-%m-%Y %H:%i') AS czas_rozpoczecia, 
+    const {eventId} = req.params;
+    const sql =
+        `SELECT wydarzenia.id_uslugodawcy, wydarzenia.nazwa, wydarzenia.opis, DATE_FORMAT(wydarzenia.czas_rozpoczecia, '%d-%m-%Y %H:%i') AS czas_rozpoczecia, 
   DATE_FORMAT(wydarzenia.czas_zakonczenia, '%d-%m-%Y %H:%i') AS czas_zakonczenia, 
   uslugodawca.nazwa_firmy, uslugodawca.adres, uslugodawca.email, uslugodawca.nr_telefonu
   FROM wydarzenia JOIN uslugodawca ON wydarzenia.id_uslugodawcy = uslugodawca.id_uslugodawcy
   WHERE wydarzenia.id_wydarzenia = ?`;
 
-  db.query(sql, [eventId], (err, result) => {
-    if (err) {
-      res.status(500).send({ error: 'Something failed!' });
-    } else {
-      res.json(result);
-    }
-  });
+    db.query(sql, [eventId], (err, result) => {
+        if (err) {
+            res.status(500).send({error: 'Something failed!'});
+        } else {
+            res.json(result);
+        }
+    });
 });
 
 app.get('/api/wydarzenia/godziny_otwarcia/:eventId', (req, res) => {
-  const { eventId } = req.params;
-  const sql =
-    `SELECT godziny_otwarcia.dzien_tygodnia, godziny_otwarcia.otwarcie, godziny_otwarcia.zamkniecie
+    const {eventId} = req.params;
+    const sql =
+        `SELECT godziny_otwarcia.dzien_tygodnia, godziny_otwarcia.otwarcie, godziny_otwarcia.zamkniecie
   FROM wydarzenia JOIN uslugodawca ON wydarzenia.id_uslugodawcy = uslugodawca.id_uslugodawcy JOIN godziny_otwarcia ON uslugodawca.id_uslugodawcy = godziny_otwarcia.id_uslugodawcy
   WHERE wydarzenia.id_wydarzenia = ?`;
 
-  db.query(sql, [eventId], (err, result) => {
-    if (err) {
-      res.status(500).send({ error: 'Something failed!' });
-    } else {
-      res.json(result);
-    }
-  });
+    db.query(sql, [eventId], (err, result) => {
+        if (err) {
+            res.status(500).send({error: 'Something failed!'});
+        } else {
+            res.json(result);
+        }
+    });
 });
 
 app.get('/api/wydarzenia/ocena/:eventId', (req, res) => {
-  const { eventId } = req.params;
-  const sql =
-    `SELECT ROUND(AVG(opinie.ilosc_gwiazdek), 2) AS avg_ilosc_gwiazdek, COUNT(opinie.ilosc_gwiazdek) AS ilosc_opinii
+    const {eventId} = req.params;
+    const sql =
+        `SELECT ROUND(AVG(opinie.ilosc_gwiazdek), 2) AS avg_ilosc_gwiazdek, COUNT(opinie.ilosc_gwiazdek) AS ilosc_opinii
   FROM opinie JOIN uslugodawca ON opinie.id_uslugodawcy = uslugodawca.id_uslugodawcy JOIN wydarzenia ON uslugodawca.id_uslugodawcy = wydarzenia. id_uslugodawcy
   WHERE wydarzenia.id_wydarzenia = ?`;
 
-  db.query(sql, [eventId], (err, result) => {
-    if (err) {
-      res.status(500).send({ error: 'Something failed!' });
-    } else {
-      res.json(result);
-    }
-  });
+    db.query(sql, [eventId], (err, result) => {
+        if (err) {
+            res.status(500).send({error: 'Something failed!'});
+        } else {
+            res.json(result);
+        }
+    });
 });
 
 app.get('/api/wydarzenia/opinie/:eventId', (req, res) => {
-  const { eventId } = req.params;
-  const sql =
-    `SELECT opinie.opis, DATE_FORMAT(opinie.czas , '%Y-%m-%d') AS czas
+    const {eventId} = req.params;
+    const sql =
+        `SELECT opinie.opis, DATE_FORMAT(opinie.czas , '%Y-%m-%d') AS czas
   FROM opinie JOIN uslugodawca ON opinie.id_uslugodawcy = uslugodawca.id_uslugodawcy JOIN wydarzenia ON uslugodawca.id_uslugodawcy = wydarzenia. id_uslugodawcy
   WHERE wydarzenia.id_wydarzenia = ?`;
 
-  db.query(sql, [eventId], (err, result) => {
-    if (err) {
-      res.status(500).send({ error: 'Something failed!' });
-    } else {
-      res.json(result);
-    }
-  });
+    db.query(sql, [eventId], (err, result) => {
+        if (err) {
+            res.status(500).send({error: 'Something failed!'});
+        } else {
+            res.json(result);
+        }
+    });
 });
 
-app.use(express.json()); // Ten wiersz jest ważny do analizowania treści JSON w żądaniach POST
 
 app.post('/api/wydarzenia/wysylanie_opinii/:id_uslugodawcy', (req, res) => {
-  const { id_uslugodawcy } = req.params;
-  const { opinion } = req.body; // Dane z ciała zapytania
-  const { rating } = req.body;
-  const { ip } = req.body;
+    const {id_uslugodawcy} = req.params;
+    const {opinion} = req.body; // Dane z ciała zapytania
+    const {rating} = req.body;
+    const {ip} = req.body;
 
-  //console.log(`Received opinion for provider ${id_uslugodawcy}: ${opinion}, ${rating}, ${ip}`);
-  const sql = 'INSERT INTO opinie (id_uslugodawcy, opis, ilosc_gwiazdek, czas, adres_ip) VALUES (?, ?, ?, now(), ?)';
+    //console.log(`Received opinion for provider ${id_uslugodawcy}: ${opinion}, ${rating}, ${ip}`);
+    const sql = 'INSERT INTO opinie (id_uslugodawcy, opis, ilosc_gwiazdek, czas, adres_ip) VALUES (?, ?, ?, now(), ?)';
 
-  db.query(sql, [id_uslugodawcy, opinion, rating, ip], (err, result) => {
-    if (err) {
-      res.status(500).send({ error: 'Something failed!' });
-    } else {
-      res.json({ status: 'success', message: 'Opinion submitted successfully' });
-    }
-  });
+    db.query(sql, [id_uslugodawcy, opinion, rating, ip], (err, result) => {
+        if (err) {
+            res.status(500).send({error: 'Something failed!'});
+        } else {
+            res.json({status: 'success', message: 'Opinion submitted successfully'});
+        }
+    });
 });
 
 app.get('/api/wydarzenia/walidacja_wysylanie_opinii', (req, res) => {
-  const { ip, provider_id } = req.query;
+    const {ip, provider_id} = req.query;
 
-  //console.log(`Received IP: ${ip} and Provider ID: ${provider_id}`);
-  sql = `SELECT * FROM opinie WHERE adres_ip = ? AND id_uslugodawcy = ?`;
+    //console.log(`Received IP: ${ip} and Provider ID: ${provider_id}`);
+    sql = `SELECT * FROM opinie WHERE adres_ip = ? AND id_uslugodawcy = ?`;
 
-  db.query(sql, [ip, provider_id], (err, result) => {
-    if (err) {
-      return res.status(500).json({ error: 'Something failed!' });
-    }
-    if (result.length > 0) {
-      res.json({ success: true });
-      //return res.status(400).json({ error: 'Opinion already submitted' });
-      //res.json(result);
-    }
-    else {
-      return res.json('Brak opinii');
-    }
+    db.query(sql, [ip, provider_id], (err, result) => {
+        if (err) {
+            return res.status(500).json({error: 'Something failed!'});
+        }
+        if (result.length > 0) {
+            res.json({success: true});
+            //return res.status(400).json({ error: 'Opinion already submitted' });
+            //res.json(result);
+        } else {
+            return res.json('Brak opinii');
+        }
 
-  });
+    });
 });
 
 app.post('/api/wydarzenia/usuwanie_opinii', (req, res) => {
-  const { id_uslugodawcy } = req.body;
-  const { ip } = req.body;
+    const {id_uslugodawcy} = req.body;
+    const {ip} = req.body;
 
-  console.log(`${id_uslugodawcy}, ${ip}`);
-  const sql = 'DELETE FROM opinie WHERE id_uslugodawcy = ? AND adres_ip = ?;';
+    console.log(`${id_uslugodawcy}, ${ip}`);
+    const sql = 'DELETE FROM opinie WHERE id_uslugodawcy = ? AND adres_ip = ?;';
 
-  db.query(sql, [id_uslugodawcy, ip], (err, result) => {
-    if (err) {
-      res.status(500).send({ error: 'Something failed!' });
-    } else {
-      res.json({ status: 'success', message: 'Opinion deleted successfully' });
-    }
-  });
+    db.query(sql, [id_uslugodawcy, ip], (err, result) => {
+        if (err) {
+            res.status(500).send({error: 'Something failed!'});
+        } else {
+            res.json({status: 'success', message: 'Opinion deleted successfully'});
+        }
+    });
 });
 
 app.listen(3000, () => {
-  console.log('Server started on port 3000');
+    console.log('Server started on port 3000');
 });
