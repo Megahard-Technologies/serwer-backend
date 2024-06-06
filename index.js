@@ -1,6 +1,9 @@
 const express = require('express');
 const cors = require('cors');
-const mysql = require('mysql');
+const mysql = require('mysql2');
+
+const QUERY_RESULT_ERROR = 500;
+const PORT = 3000;
 
 const app = express();
 
@@ -30,7 +33,7 @@ app.get('/api/wydarzenia', (req, res) => {
 
   db.query(sql, (err, result) => {
     if (err) {
-      res.status(500).send({ error: 'Something failed!' });
+      res.status(QUERY_RESULT_ERROR).send({ error: 'Something failed!' });
     } else {
       const events = result.map(event => {
         if (event.zdjecie) {
@@ -46,16 +49,17 @@ app.get('/api/wydarzenia', (req, res) => {
 
 app.get('/api/wydarzenia/szczegoly/:eventId', (req, res) => {
   const { eventId } = req.params;
-  const sql =
-    `SELECT wydarzenia.id_uslugodawcy, wydarzenia.nazwa, wydarzenia.opis, DATE_FORMAT(wydarzenia.czas_rozpoczecia, '%d-%m-%Y %H:%i') AS czas_rozpoczecia, 
+  const sql =`SELECT wydarzenia.id_uslugodawcy, wydarzenia.nazwa, wydarzenia.opis, 
+  DATE_FORMAT(wydarzenia.czas_rozpoczecia, '%d-%m-%Y %H:%i') AS czas_rozpoczecia, 
   DATE_FORMAT(wydarzenia.czas_zakonczenia, '%d-%m-%Y %H:%i') AS czas_zakonczenia, 
-  uslugodawca.nazwa_firmy, uslugodawca.adres, uslugodawca.email, uslugodawca.nr_telefonu
+  wydarzenia.cena, uslugodawca.nazwa_firmy, uslugodawca.adres, uslugodawca.email, 
+  uslugodawca.nr_telefonu
   FROM wydarzenia JOIN uslugodawca ON wydarzenia.id_uslugodawcy = uslugodawca.id_uslugodawcy
   WHERE wydarzenia.id_wydarzenia = ?`;
 
   db.query(sql, [eventId], (err, result) => {
     if (err) {
-      res.status(500).send({ error: 'Something failed!' });
+      res.status(QUERY_RESULT_ERROR).send({ error: 'Something failed!' });
     } else {
       res.json(result);
     }
@@ -71,7 +75,7 @@ app.get('/api/wydarzenia/godziny_otwarcia/:eventId', (req, res) => {
 
   db.query(sql, [eventId], (err, result) => {
     if (err) {
-      res.status(500).send({ error: 'Something failed!' });
+      res.status(QUERY_RESULT_ERROR).send({ error: 'Something failed!' });
     } else {
       res.json(result);
     }
@@ -87,7 +91,7 @@ app.get('/api/wydarzenia/ocena/:eventId', (req, res) => {
 
   db.query(sql, [eventId], (err, result) => {
     if (err) {
-      res.status(500).send({ error: 'Something failed!' });
+      res.status(QUERY_RESULT_ERROR).send({ error: 'Something failed!' });
     } else {
       res.json(result);
     }
@@ -103,7 +107,7 @@ app.get('/api/wydarzenia/opinie/:eventId', (req, res) => {
 
   db.query(sql, [eventId], (err, result) => {
     if (err) {
-      res.status(500).send({ error: 'Something failed!' });
+      res.status(QUERY_RESULT_ERROR).send({ error: 'Something failed!' });
     } else {
       res.json(result);
     }
@@ -123,7 +127,7 @@ app.post('/api/wydarzenia/wysylanie_opinii/:id_uslugodawcy', (req, res) => {
 
   db.query(sql, [id_uslugodawcy, opinion, rating, ip], (err, result) => {
     if (err) {
-      res.status(500).send({ error: 'Something failed!' });
+      res.status(QUERY_RESULT_ERROR).send({ error: 'Something failed!' });
     } else {
       res.json({ status: 'success', message: 'Opinion submitted successfully' });
     }
@@ -138,7 +142,7 @@ app.get('/api/wydarzenia/walidacja_wysylanie_opinii', (req, res) => {
 
   db.query(sql, [ip, provider_id], (err, result) => {
     if (err) {
-      return res.status(500).json({ error: 'Something failed!' });
+      return res.status(QUERY_RESULT_ERROR).json({ error: 'Something failed!' });
     }
     if (result.length > 0) {
       res.json({ success: true });
@@ -156,18 +160,18 @@ app.post('/api/wydarzenia/usuwanie_opinii', (req, res) => {
   const { id_uslugodawcy } = req.body;
   const { ip } = req.body;
 
-  console.log(`${id_uslugodawcy}, ${ip}`);
+  //console.log(`${id_uslugodawcy}, ${ip}`);
   const sql = 'DELETE FROM opinie WHERE id_uslugodawcy = ? AND adres_ip = ?;';
 
   db.query(sql, [id_uslugodawcy, ip], (err, result) => {
     if (err) {
-      res.status(500).send({ error: 'Something failed!' });
+      res.status(QUERY_RESULT_ERROR).send({ error: 'Something failed!' });
     } else {
       res.json({ status: 'success', message: 'Opinion deleted successfully' });
     }
   });
 });
 
-app.listen(3000, () => {
+app.listen(PORT, () => {
   console.log('Server started on port 3000');
 });
