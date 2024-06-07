@@ -26,10 +26,6 @@ db.connect((err) => {
 
 // Uslugodawca
 
-// app.post('/api/uslugodawca/', (req, res) => {
-//
-// }
-
 app.post('/api/wydarzenia/', (req, res) => {
     const {name, image, description, startDate, endDate, price, serviceProviderId} = req.body;
 
@@ -49,7 +45,8 @@ app.post('/api/wydarzenia/', (req, res) => {
 });
 
 app.get('/api/wydarzenia/', (req, res) => {
-    const sql = `SELECT nazwa AS name, 
+    const sql = `SELECT id_wydarzenia AS id,
+                      nazwa AS name, 
                       zdjecie AS image, 
                       opis AS description, 
                       czas_rozpoczecia AS startDate, 
@@ -73,9 +70,86 @@ app.get('/api/wydarzenia/', (req, res) => {
     });
 });
 
-// app.get('/api/opinie', (req, res) => {
-//
-// })
+
+app.get('/api/wydarzenia/:id', (req, res) => {
+    const { id } = req.params;
+    const sql = `SELECT id_wydarzenia AS id,
+                      nazwa AS name, 
+                      zdjecie AS image, 
+                      opis AS description, 
+                      czas_rozpoczecia AS startDate, 
+                      czas_zakonczenia AS endDate,
+                      cena AS price
+               FROM wydarzenia
+               WHERE id_wydarzenia = ?`;
+
+    db.query(sql, [id], (err, result) => {
+        if (err) {
+            res.status(500).send({error: 'Something failed!'});
+        } else {
+            if (result.length > 0) {
+                const event = {
+                    ...result[0],
+                    startDate: new Date(result[0].startDate),
+                    endDate: new Date(result[0].endDate),
+                    price: parseFloat(result[0].price)
+                };
+                res.json(event);
+            } else {
+                res.status(404).send({error: 'Event not found!'});
+            }
+        }
+    });
+});
+
+app.delete('/api/wydarzenia/:eventId', (req, res) => {
+    const {eventId} = req.params;
+    const sql = 'DELETE FROM wydarzenia WHERE id_wydarzenia = ?';
+
+    db.query(sql, [eventId], (err, result) => {
+        if (err) {
+            res.status(500).send({error: 'Something failed!'});
+        } else {
+            res.json({status: 'success', message: 'Event deleted successfully'});
+        }
+    });
+
+});
+
+app.put('/api/wydarzenia/:eventId', (req, res) => {
+    const {eventId} = req.params;
+    const {name, image, description, startDate, endDate, price} = req.body;
+
+    const sql = `UPDATE wydarzenia SET nazwa = ?, zdjecie = ?, opis = ?, czas_rozpoczecia = ?, czas_zakonczenia = ?, cena = ?
+               WHERE id_wydarzenia = ?`;
+
+    let mysqlStartDate = new Date(startDate).toISOString().slice(0, 19).replace('T', ' ');
+    let mysqlEndDate = new Date(endDate).toISOString().slice(0, 19).replace('T', ' ');
+
+    db.query(sql, [name, image, description, mysqlStartDate, mysqlEndDate, price, eventId], (err, result) => {
+        if (err) {
+            res.status(500).send({error: 'Something failed!'});
+        } else {
+            res.json({status: 'success', message: 'Event updated successfully'});
+        }
+    });
+
+});
+
+
+app.get('/api/opinions/:serviceProviderId', (req, res) => {
+    const { serviceProviderId } = req.params;
+    const sql = `SELECT ilosc_gwiazdek AS stars, opis AS description, DATE_FORMAT(czas , '%d-%m-%Y %H:%i') AS date FROM opinie WHERE id_uslugodawcy = ?`;
+
+    db.query(sql, [serviceProviderId], (err, result) => {
+        if (err) {
+            res.status(500).send({error: 'Something failed!'});
+        } else {
+            res.json(result);
+        }
+    });
+});
+
 
 
 // User
