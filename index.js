@@ -74,9 +74,8 @@ app.get('/api/wydarzenia/:serviceProviderId', (req, res) => {
         }
     });
 });
-
-app.get('/api/wydarzenia/:id', (req, res) => {
-    const { id } = req.params;
+app.get('/api/wydarzenia/:serviceProviderId/:eventId', (req, res) => {
+    const { serviceProviderId, eventId } = req.params;
     const sql = `SELECT id_wydarzenia AS id,
                       nazwa AS name, 
                       zdjecie AS image, 
@@ -85,9 +84,9 @@ app.get('/api/wydarzenia/:id', (req, res) => {
                       czas_zakonczenia AS endDate,
                       cena AS price
                FROM wydarzenia
-               WHERE id_wydarzenia = ?`;
+               WHERE id_uslugodawcy = ? AND id_wydarzenia = ?`;
 
-    db.query(sql, [id], (err, result) => {
+    db.query(sql, [serviceProviderId, eventId], (err, result) => {
         if (err) {
             res.status(500).send({error: 'Something failed!'});
         } else {
@@ -105,7 +104,6 @@ app.get('/api/wydarzenia/:id', (req, res) => {
         }
     });
 });
-
 app.delete('/api/wydarzenia/:eventId', (req, res) => {
     const {eventId} = req.params;
     const sql = 'DELETE FROM wydarzenia WHERE id_wydarzenia = ?';
@@ -163,14 +161,18 @@ app.get('/api/wydarzenia', (req, res) => {
   FROM wydarzenia JOIN uslugodawca ON wydarzenia.id_uslugodawcy = uslugodawca.id_uslugodawcy
   WHERE wydarzenia.czas_zakonczenia >= NOW()`; // zakończone wydarzenia nie pokazują się
 
-
-  db.query(sql, (err, result) => {
-    if (err) {
-      res.status(QUERY_RESULT_ERROR).send({ error: 'Something failed!' });
-    } else {
-      const events = result.map(event => {
-        if (event.zdjecie) {
-          event.image_base64 = event.zdjecie;
+    db.query(sql, (err, result) => {
+        if (err) {
+            res.status(QUERY_RESULT_ERROR).send({ error: 'Something failed!' });
+        } else {
+            const events = result.map(event => {
+                if (event.zdjecie) {
+                    event.image_base64 = event.zdjecie;
+                }
+                delete event.zdjecie;
+                return event;
+            });
+            res.json(events);
         }
     });
 });
