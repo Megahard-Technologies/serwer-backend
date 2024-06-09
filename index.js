@@ -44,7 +44,8 @@ app.post('/api/wydarzenia/', (req, res) => {
     });
 });
 
-app.get('/api/wydarzenia/', (req, res) => {
+app.get('/api/wydarzenia/:serviceProviderId', (req, res) => {
+    const { serviceProviderId } = req.params;
     const sql = `SELECT id_wydarzenia AS id,
                       nazwa AS name, 
                       zdjecie AS image, 
@@ -52,9 +53,10 @@ app.get('/api/wydarzenia/', (req, res) => {
                       czas_rozpoczecia AS startDate, 
                       czas_zakonczenia AS endDate,
                       cena AS price
-               FROM wydarzenia`;
+               FROM wydarzenia
+               WHERE id_uslugodawcy = ?`;
 
-    db.query(sql, (err, result) => {
+    db.query(sql, [serviceProviderId], (err, result) => {
         if (err) {
             res.status(500).send({error: 'Something failed!'});
         } else {
@@ -69,7 +71,6 @@ app.get('/api/wydarzenia/', (req, res) => {
         }
     });
 });
-
 
 app.get('/api/wydarzenia/:id', (req, res) => {
     const { id } = req.params;
