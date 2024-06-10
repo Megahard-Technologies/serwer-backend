@@ -177,7 +177,7 @@ app.get('/api/wydarzenia', (req, res) => {
     });
 });
 
-app.get('/api/wydarzenia/szczegoly/:eventId', (req, res) => {
+app.get('/api/wydarzenia/lista/szczegoly/:eventId', (req, res) => {
 
   const { eventId } = req.params;
   const sql =`SELECT wydarzenia.id_uslugodawcy, wydarzenia.nazwa, wydarzenia.opis, 
@@ -198,7 +198,7 @@ app.get('/api/wydarzenia/szczegoly/:eventId', (req, res) => {
   });
 });
 
-app.get('/api/wydarzenia/godziny_otwarcia/:eventId', (req, res) => {
+app.get('/api/wydarzenia/szczegoly/godziny_otwarcia/:eventId', (req, res) => {
     const {eventId} = req.params;
     const sql =
         `SELECT godziny_otwarcia.dzien_tygodnia, godziny_otwarcia.otwarcie, godziny_otwarcia.zamkniecie
@@ -215,7 +215,7 @@ app.get('/api/wydarzenia/godziny_otwarcia/:eventId', (req, res) => {
   });
 });
 
-app.get('/api/wydarzenia/ocena/:eventId', (req, res) => {
+app.get('/api/wydarzenia/szczegoly/ocena/:eventId', (req, res) => {
     const {eventId} = req.params;
     const sql =
         `SELECT ROUND(AVG(opinie.ilosc_gwiazdek), 2) AS avg_ilosc_gwiazdek, COUNT(opinie.ilosc_gwiazdek) AS ilosc_opinii
@@ -232,7 +232,7 @@ app.get('/api/wydarzenia/ocena/:eventId', (req, res) => {
   });
 });
 
-app.get('/api/wydarzenia/opinie/:eventId', (req, res) => {
+app.get('/api/wydarzenia/szczegoly/opinie/:eventId', (req, res) => {
     const {eventId} = req.params;
     const sql =
         `SELECT opinie.opis, DATE_FORMAT(opinie.czas , '%Y-%m-%d') AS czas
@@ -250,7 +250,7 @@ app.get('/api/wydarzenia/opinie/:eventId', (req, res) => {
 });
 
 
-app.post('/api/wydarzenia/wysylanie_opinii/:id_uslugodawcy', (req, res) => {
+app.post('/api/wydarzenia/szczegoly/wysylanie_opinii/:id_uslugodawcy', (req, res) => {
     const {id_uslugodawcy} = req.params;
     const {opinion} = req.body; // Dane z ciała zapytania
     const {rating} = req.body;
@@ -269,7 +269,7 @@ app.post('/api/wydarzenia/wysylanie_opinii/:id_uslugodawcy', (req, res) => {
   });
 });
 
-app.get('/api/wydarzenia/walidacja_wysylanie_opinii', (req, res) => {
+app.get('/api/walidacja_wysylanie_opinii', (req, res) => {
     const {ip, provider_id} = req.query;
 
     //console.log(`Received IP: ${ip} and Provider ID: ${provider_id}`);
@@ -292,7 +292,7 @@ app.get('/api/wydarzenia/walidacja_wysylanie_opinii', (req, res) => {
     });
 });
 
-app.post('/api/wydarzenia/usuwanie_opinii', (req, res) => {
+app.post('/api/wydarzenia/szczegoly/usuwanie_opinii', (req, res) => {
     const {id_uslugodawcy} = req.body;
     const {ip} = req.body;
 
